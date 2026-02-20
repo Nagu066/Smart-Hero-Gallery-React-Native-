@@ -1,6 +1,6 @@
-# Smart Hero Gallery Assignment
+# Smart Hero Gallery
 
-This project implements the `SmartHeroGallery` React Native take-home assignment in a bare React Native app.
+This project implements the `SmartHeroGallery` React Native in a bare React Native app.
 
 ## Setup
 
@@ -33,7 +33,7 @@ npm run android
 npm test
 ```
 
-## Implemented Requirements
+## Implementation
 
 - Fetches gallery from Alive API and reads `data.gallery`.
 - Builds pages using deterministic pure `buildPages(items, { lookahead })`.
