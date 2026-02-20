@@ -1,97 +1,136 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# Smart Hero Gallery Assignment
 
-# Getting Started
+This project implements the `SmartHeroGallery` React Native take-home assignment in a bare React Native app.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+## Setup
 
-## Step 1: Start Metro
-
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
-
-To start the Metro dev server, run the following command from the root of your React Native project:
-
-```sh
-# Using npm
-npm start
-
-# OR using Yarn
-yarn start
+1. Install JavaScript dependencies:
+```bash
+npm install
 ```
 
-## Step 2: Build and run your app
-
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
-
-```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
+2. iOS pods:
+```bash
+cd ios
+pod install
+cd ..
 ```
 
-### iOS
-
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
+3. Start Metro:
+```bash
+npm run start
 ```
 
-Then, and every time you update your native dependencies, run:
-
-```sh
-bundle exec pod install
-```
-
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
-
-```sh
-# Using npm
+4. Run app:
+```bash
 npm run ios
-
-# OR using Yarn
-yarn ios
+# or
+npm run android
 ```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+5. Run tests:
+```bash
+npm test
+```
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+## Implemented Requirements
 
-## Step 3: Modify your app
+- Fetches gallery from Alive API and reads `data.gallery`.
+- Builds pages using deterministic pure `buildPages(items, { lookahead })`.
+- 2-column layout per page: left hero tile + two equal right stacked tiles.
+- Maximum one video per page.
+- Video preference is applied page-by-page using closest `9:16` rule.
+- Horizontal paged `FlatList` for smooth 100+ items behavior.
+- Progressive image loading: preview -> processed -> original fallback.
+- Progressive video poster loading: preview thumbnail -> processed thumbnail -> original thumbnail.
+- Video source fallback: processed -> original.
+- If playback fails, poster remains and `Tap to retry` overlay appears.
+- First page nudge button scrolls to page 2 and auto-hides.
+- Fullscreen modal carousel with prev/next controls.
+- Fullscreen media shown in `contain` mode.
+- Image supports pinch and double-tap zoom in fullscreen.
+- Video has no zoom.
 
-Now that you have successfully run the app, let's make changes!
+## Core Logic
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+File: `src/utils/buildPages.ts`
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+Rules implemented:
+- Preserve API order as much as possible.
+- For each page, choose one video from remaining items using closest score to `0.5625` (`9/16`) in a configurable lookahead window.
+- Tie-break naturally keeps earlier item because scan is in order.
+- Fill order:
+  - Left: selected video else image
+  - Right top and right bottom: images
+- If right images are insufficient, selected video may move to right and left becomes image.
+- Stops when a complete 3-tile page cannot be formed.
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+## Smart Cover Approach
 
-## Congratulations! :tada:
+Tile media uses `resizeMode="cover"` for page layout. The tile geometry is fixed (left tall hero + right equal stack), which tends to crop primarily on one axis depending on source aspect ratio. In fullscreen, media switches to `contain` to avoid truncation.
 
-You've successfully run and modified your React Native App. :partying_face:
+## Fallback Handling
 
-### Now what?
+File: `src/utils/mediaUrls.ts` builds all URLs from:
+- `CDN_BASE = https://cdn.iamalive.app`
+- `PROCESSED_MOBILE_PREFIX = /processed/mobile/`
+- `PREVIEW_PREFIX = /processed/preview/`
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
+Image pipeline:
+- Try preview placeholder
+- Load processed
+- Fallback to original if processed fails
 
-# Troubleshooting
+Video pipeline:
+- Poster sequence: preview -> processed -> original
+- Video sequence: processed -> original
+- Playback failure keeps poster + retry overlay
 
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
+## Performance Work
 
-# Learn More
+- Horizontal `FlatList` with paging and snap behavior.
+- Memoized tiles (`React.memo`) and stable callbacks (`useCallback`).
+- Viewability-based active page with 60% threshold.
+- Video playback restricted to visible page only.
+- Prefetch runs when page changes.
+- Page-building computation done outside render via `useMemo`.
+- `removeClippedSubviews`, small render window, and `getItemLayout` added.
 
-To learn more about React Native, take a look at the following resources:
+## Extra Tasks (all 4 done)
 
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+1. Prefetch
+- On page `N`, prefetches images for `N+1` and `N+2`.
+- For videos, prefetches only posters/thumbnails.
+
+2. Viewability control for video
+- Video plays only on visible page and pauses otherwise (60% threshold).
+
+3. Unit tests for `buildPages`
+- Added tests for:
+  - only images
+  - multiple videos with varying aspect ratios
+  - missing aspect ratios
+  - long list one-video-per-page behavior
+
+4. Page indicator
+- Dot indicator showing current page index.
+
+## Project Structure
+
+- `src/components/SmartHeroGallery.tsx`: main screen and layout
+- `src/components/GalleryTile.tsx`: progressive image/video tile rendering
+- `src/components/FullscreenCarouselModal.tsx`: full-screen carousel
+- `src/components/ZoomableImage.tsx`: pinch and double-tap image zoom
+- `src/components/PageIndicator.tsx`: page dots
+- `src/hooks/useSmartGallery.ts`: fetch + state + page derivation
+- `src/utils/buildPages.ts`: deterministic layout builder
+- `src/utils/mediaUrls.ts`: CDN URL and fallback builders
+- `src/api/galleryApi.ts`: API fetch/normalization
+- `__tests__/buildPages.test.ts`: unit tests
+
+## With More Time
+
+- Add integration tests for fallback transitions and playback failure states.
+- Improve Android fullscreen gesture interactions with a newer zoom library.
+- Add analytic events for video retries and asset fallback rates.
+- Fine tune page residual handling for datasets dominated by videos.
