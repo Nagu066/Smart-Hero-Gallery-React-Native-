@@ -1,6 +1,7 @@
 # Smart Hero Gallery
 
 This project implements the `SmartHeroGallery` React Native in a bare React Native app.
+Demo video: https://drive.google.com/file/d/1o23XRYBRInM7OUfjvXWm6zHdrgpGuScY/view?usp=sharing
 
 ## Setup
 
